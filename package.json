@@ -1,0 +1,17 @@
+{
+  "name": "shotmc-manager",
+  "version": "1.0.0",
+  "description": "A Discord bot for managing Minecraft servers.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.1.0",
+    "mongoose": "^6.0.12",
+    "dotenv": "^10.0.0",
+    "node-fetch": "^2.6.7",
+    "gamedig": "^4.0.5",
+    "rcon-client": "^4.2.2"
+  }
+}
