@@ -29,33 +29,31 @@ module.exports = {
             // --- Build Online Embed ---
             if (data.online) {
                 
-                // --- NEW: Create the Playerlist Button ---
+                // Get the server name to use in the title and fields
+                const serverName = guildConfig.serverName || (data.motd && data.motd.clean[0]) || guildConfig.serverIp;
+
                 const playerListButton = new ButtonBuilder()
-                    .setCustomId('status-player-list') // This ID will be used in interactionCreate.js
+                    .setCustomId('status-player-list') 
                     .setLabel('Playerlist')
-                    .setStyle(ButtonStyle.Primary) // This makes it blue
-                    .setDisabled(data.players.online === 0); // Disable if no one is online
+                    .setStyle(ButtonStyle.Primary) // Blue
+                    .setDisabled(data.players.online === 0);
 
                 const row = new ActionRowBuilder().addComponents(playerListButton);
-                // --- End of new button code ---
 
                 const onlineEmbed = new EmbedBuilder()
                     .setColor(0x57F287) // Green
-                    .setTitle(guildConfig.serverName || (data.motd && data.motd.clean[0]) || 'Minecraft Server')
-                    .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
-                    .setDescription(guildConfig.serverDescription || null)
+                    .setTitle(`${serverName} | Server Status`) // NEW TITLE
+                    .setThumbnail(data.icon || guildConfig.thumbnailUrl || null) // ADDED THUMBNAIL
                     .addFields(
-                        { name: 'Status', value: '✅ Online' },
-                        { name: 'Players', value: `\`${data.players.online} / ${data.players.max}\`` },
+                        // --- NEW FIELDS ---
+                        { name: 'Server Name', value: `\`${serverName}\`` },
                         { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
-                        { name: 'Next Restart', value: 'Not Scheduled' }, // Placeholder
-                        { name: 'Server Uptime', value: 'N/A' }          // Placeholder
+                        { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
+                        { name: 'Players', value: `\`${data.players.online} / ${data.players.max}\`` }
                     )
-                    .setImage(guildConfig.serverBannerUrl || null)
                     .setTimestamp()
                     .setFooter({ text: '© Created by RgX' });
 
-                // Send the embed *with* the button
                 await interaction.editReply({ embeds: [onlineEmbed], components: [row] }); 
             } 
             // --- Build Offline Embed ---
@@ -67,27 +65,26 @@ module.exports = {
             console.error('Error fetching server status (mcsrvstat):', error.message);
             
             const config = guildConfig || await GuildConfig.findOne({ guildId });
-            
+            const serverName = config.serverName || config.serverIp || 'Minecraft Server';
+
             const offlineEmbed = new EmbedBuilder()
                 .setColor(0xED4245) // Red
-                .setTitle(config.serverName || config.serverIp || 'Minecraft Server')
-                .setThumbnail(config.thumbnailUrl || null)
-                .setDescription(config.serverDescription || null)
+                .setTitle(`${serverName} | Server Status`) // NEW TITLE
+                .setThumbnail(config.thumbnailUrl || null) // ADDED THUMBNAIL
                 .addFields(
-                    { name: 'Status', value: '❌ Offline' },
-                    { name: 'Players', value: '`N/A`' },
+                    // --- NEW FIELDS (Offline) ---
+                    { name: 'Server Name', value: `\`${serverName}\`` },
                     { name: 'Server IP', value: `\`${config.serverIp || 'Not Set'}\`` },
-                    { name: 'Next Restart', value: 'Not Scheduled' },
-                    { name: 'Server Uptime', value: 'N/A' }
+                    { name: 'Server Port', value: `\`${config.serverPort || 'Not Set'}\`` },
+                    { name: 'Players', value: '`N/A`' },
+                    { name: 'Status', value: '`❌ Offline`' }
                 )
-                .setImage(config.serverBannerUrl || null)
                 .setTimestamp()
                 .setFooter({ text: '© Created by RgX' });
             
-            // Send the offline embed (no buttons)
             await interaction.editReply({ 
                 embeds: [offlineEmbed], 
-                components: [], // No buttons
+                components: [], // No buttons for offline
                 ephemeral: true 
             });
         }
