@@ -22,22 +22,23 @@ async function updateStatus(client, guildConfig) {
         // --- Fetch status from mcsrvstat.us API ---
         const res = await fetch(`https://api.mcsrvstat.us/3/${guildConfig.serverIp}:${guildConfig.serverPort}`);
         const data = await res.json();
+        
+        // Get the server name to use in the title and fields
+        const serverName = guildConfig.serverName || (data.motd && data.motd.clean[0]) || guildConfig.serverIp;
 
         // --- Build Online Embed ---
         if (data.online) {
             embed = new EmbedBuilder()
                 .setColor(0x57F287) // Green
-                .setTitle(guildConfig.serverName || (data.motd && data.motd.clean[0]) || 'Minecraft Server')
-                .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
-                .setDescription(guildConfig.serverDescription || null)
+                .setTitle(`${serverName} | Server Status`) // NEW TITLE
+                .setThumbnail(data.icon || guildConfig.thumbnailUrl || null) // ADDED THUMBNAIL
                 .addFields(
-                    { name: 'Status', value: '✅ Online' },
-                    { name: 'Players', value: `\`${data.players.online} / ${data.players.max}\`` },
+                    // --- NEW FIELDS ---
+                    { name: 'Server Name', value: `\`${serverName}\`` },
                     { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
-                    { name: 'Next Restart', value: 'Not Scheduled' }, // Placeholder
-                    { name: 'Server Uptime', value: 'N/A' }          // Placeholder
+                    { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
+                    { name: 'Players', value: `\`${data.players.online} / ${data.players.max}\`` }
                 )
-                .setImage(guildConfig.serverBannerUrl || null)
                 .setTimestamp()
                 .setFooter({ text: footerText });
         } 
@@ -48,19 +49,20 @@ async function updateStatus(client, guildConfig) {
 
     } catch (error) {
         // --- Build Offline Embed ---
+        const serverName = guildConfig.serverName || guildConfig.serverIp;
+
         embed = new EmbedBuilder()
             .setColor(0xED4245) // Red
-            .setTitle(guildConfig.serverName || guildConfig.serverIp)
-            .setThumbnail(guildConfig.thumbnailUrl || null)
-            .setDescription(guildConfig.serverDescription || null)
+            .setTitle(`${serverName} | Server Status`) // NEW TITLE
+            .setThumbnail(guildConfig.thumbnailUrl || null) // ADDED THUMBNAIL
             .addFields(
-                { name: 'Status', value: '❌ Offline' },
-                { name: 'Players', value: '`N/A`' },
+                // --- NEW FIELDS (Offline) ---
+                { name: 'Server Name', value: `\`${serverName}\`` },
                 { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
-                { name: 'Next Restart', value: 'Not Scheduled' },
-                { name: 'Server Uptime', value: 'N/A' } 
+                { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
+                { name: 'Players', value: '`N/A`' },
+                { name: 'Status', value: '`❌ Offline`' }
             )
-            .setImage(guildConfig.serverBannerUrl || null)
             .setTimestamp()
             .setFooter({ text: footerText });
     }
@@ -90,7 +92,7 @@ async function updateStatus(client, guildConfig) {
     }
 }
 
-// --- Interval Handler ---
+// --- Interval Handler (No changes needed) ---
 module.exports = async (client) => {
     if (!client.statusUpdateIntervals) {
         client.statusUpdateIntervals = new Map();
@@ -107,7 +109,6 @@ module.exports = async (client) => {
         await updateStatus(client, guildConfig);
         const intervalTime = guildConfig.statusUpdateInterval;
         
-        // --- THIS IS THE CORRECTED LINE ---
         const newInterval = setInterval(async () => {
             const latestConfig = await GuildConfig.findOne({ guildId: guildConfig.guildId });
             if (latestConfig && latestConfig.statusChannelId && latestConfig.statusUpdateInterval) {
