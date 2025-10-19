@@ -16,7 +16,9 @@ async function updateStatus(client, guildConfig) {
 
     // Set interval text
     const intervalSeconds = (guildConfig.statusUpdateInterval || 60000) / 1000;
-    const footerText = `© Created by RgX • Auto-updates every ${intervalSeconds} seconds`;
+    const footerText = `${client.user.username} | Auto-updates every ${intervalSeconds} seconds`;
+
+    
 
     try {
         // --- Fetch status from mcsrvstat.us API ---
