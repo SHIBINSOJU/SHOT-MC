@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const GuildConfig = require('../models/GuildConfig');
-const gamedig = require('gamedig'); // Use gamedig again
+const gamedig = require('gamedig'); // Use gamedig
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,11 +24,9 @@ module.exports = {
 
             // --- Fetch status using gamedig ---
             const state = await gamedig.query({
-                type: guildConfig.serverEdition === 'bedrock' ? 'minecraftbe' : 'minecraft', // Use correct type for gamedig
+                type: guildConfig.serverEdition === 'bedrock' ? 'minecraftbe' : 'minecraft', 
                 host: guildConfig.serverIp,
                 port: guildConfig.serverPort,
-                // Optional: Add a timeout if needed
-                // socketTimeout: 5000 
             });
 
             // --- Build Online Embed ---
@@ -45,8 +43,12 @@ module.exports = {
             const onlineEmbed = new EmbedBuilder()
                 .setColor(0x57F287) // Green
                 .setTitle(`${serverName} | Server Status`) 
-                .setThumbnail(guildConfig.thumbnailUrl || null) // Use stored thumbnail first
+                .setThumbnail(guildConfig.thumbnailUrl || state.raw?.favicon || null) // Use stored thumbnail or favicon from query
                 .addFields(
+                    // --- NEW FIELDS ---
+                    { name: 'Status', value: '🟢 Server Online' },
+                    { name: 'MOTD', value: `\`\`\`${state.name || 'N/A'}\`\`\`` }, // MOTD in code block
+                    // --- EXISTING FIELDS ---
                     { name: 'Server Name', value: `\`${serverName}\`` },
                     { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                     { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
@@ -69,11 +71,15 @@ module.exports = {
                 .setTitle(`${serverName} | Server Status`)
                 .setThumbnail(config.thumbnailUrl || null) 
                 .addFields(
+                    // --- NEW FIELDS ---
+                    { name: 'Status', value: '🔴 Server Offline' },
+                    { name: 'MOTD', value: '```N/A```' }, // MOTD placeholder
+                    // --- EXISTING FIELDS ---
                     { name: 'Server Name', value: `\`${serverName}\`` },
                     { name: 'Server IP', value: `\`${config.serverIp || 'Not Set'}\`` },
                     { name: 'Server Port', value: `\`${config.serverPort || 'Not Set'}\`` },
-                    { name: 'Players', value: '`N/A`' },
-                    { name: 'Status', value: '`❌ Offline`' }
+                    { name: 'Players', value: '`N/A`' }
+                    // Removed the extra 'Status' field from the end
                 )
                 .setTimestamp()
                 .setFooter({ text: interaction.client.user.username });
