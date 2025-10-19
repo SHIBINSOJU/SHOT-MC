@@ -58,9 +58,7 @@ async function updateStatus(client, guildConfig) {
                 { name: 'Players', value: '`N/A`' },
                 { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                 { name: 'Next Restart', value: 'Not Scheduled' },
-                // --- THIS IS THE CORRECTED LINE ---
                 { name: 'Server Uptime', value: 'N/A' } 
-                // ---
             )
             .setImage(guildConfig.serverBannerUrl || null)
             .setTimestamp()
@@ -92,7 +90,7 @@ async function updateStatus(client, guildConfig) {
     }
 }
 
-// --- Interval Handler (No changes needed) ---
+// --- Interval Handler ---
 module.exports = async (client) => {
     if (!client.statusUpdateIntervals) {
         client.statusUpdateIntervals = new Map();
@@ -108,7 +106,9 @@ module.exports = async (client) => {
         }
         await updateStatus(client, guildConfig);
         const intervalTime = guildConfig.statusUpdateInterval;
-        const newInterval = setInterval(async (). => {
+        
+        // --- THIS IS THE CORRECTED LINE ---
+        const newInterval = setInterval(async () => {
             const latestConfig = await GuildConfig.findOne({ guildId: guildConfig.guildId });
             if (latestConfig && latestConfig.statusChannelId && latestConfig.statusUpdateInterval) {
                 await updateStatus(client, latestConfig);
