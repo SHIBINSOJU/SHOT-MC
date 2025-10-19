@@ -75,9 +75,9 @@ console.log('\n'); // Adds a space
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI).then(() => {
-    console.log('✅ Connected to MongoDB!');
+    console.log('Connected to MongoDB!');
 }).catch(err => {
-    console.error('❌ Failed to connect to MongoDB:', err);
+    console.error('Failed to connect to MongoDB:', err);
 });
 
 client.login(process.env.DISCORD_TOKEN);
