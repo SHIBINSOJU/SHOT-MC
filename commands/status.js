@@ -5,16 +5,25 @@ const GuildConfig = require('../models/GuildConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const gamedig = require('gamedig');
+const GuildConfig = require('../models/GuildConfig');
+
+module.exports = {
+    data: new SlashCommandBuilder()
         .setName('status')
         .setDescription('Displays the live status of the Minecraft server.'),
     async execute(interaction) {
+        
+        await interaction.deferReply(); // We keep this to prevent "Unknown Interaction"
+
         const guildId = interaction.guild.id;
         let guildConfig;
 
         try {
             guildConfig = await GuildConfig.findOne({ guildId });
             if (!guildConfig || !guildConfig.serverIp) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     content: 'The server has not been set up yet. Please use `/setup-server` first.',
                     ephemeral: true,
                 });
@@ -30,75 +39,84 @@ module.exports = {
             // --- Create Buttons ---
             const refreshButton = new ButtonBuilder()
                 .setCustomId('status-refresh')
-                .setLabel('Refresh Status')
+                .setLabel('Refresh') // Shortened label
                 .setStyle(ButtonStyle.Primary)
                 .setEmoji('🔄');
 
             const playerListButton = new ButtonBuilder()
                 .setCustomId('status-player-list')
-                .setLabel('Show Player List')
+                .setLabel('Player List') // Shortened label
                 .setStyle(ButtonStyle.Secondary)
                 .setEmoji('👥')
-                .setDisabled(state.players.length === 0); // Disable button if no one is online
+                .setDisabled(state.players.length === 0);
 
             const joinDiscordButton = new ButtonBuilder()
                 .setLabel('Join Discord')
                 .setStyle(ButtonStyle.Link)
-                // You'll need to store your invite link in your config, or hardcode it here
                 .setURL(guildConfig.discordInvite || 'https://discord.gg/placeholder');
 
             const row = new ActionRowBuilder()
                 .addComponents(refreshButton, playerListButton, joinDiscordButton);
 
-            // --- Create Online Embed (matches image) ---
+            // --- NEW Online Embed (More attractive) ---
             const onlineEmbed = new EmbedBuilder()
                 .setTitle(`${guildConfig.serverName || state.name} | Server Status`)
                 .setColor('Green')
+                .setThumbnail(state.raw.favicon || null)
                 .addFields(
-                    { name: 'Server Name', value: guildConfig.serverName || state.name },
-                    { name: 'IP', value: guildConfig.serverIp },
-                    { name: 'Port', value: `${guildConfig.serverPort}` },
-                    { name: 'Status', value: '✅ Online' },
-                    { name: 'Players Online', value: `**${state.players.length} / ${state.maxplayers}**` },
-                    { name: 'Player List', value: state.players.length > 0 ? 'Click button below' : 'No players online' }
-                )
-                // Add server icon if gamedig finds it
-                .setThumbnail(state.raw.favicon || null) 
-                .setTimestamp()
-                .setFooter({ text: '© Created by RgX' }); // Added footer from image
-
-            await interaction.reply({ embeds: [onlineEmbed], components: [row] });
-
-        } catch (error) {
-            console.error('Error fetching server status:', error);
-
-            // --- Create Offline Embed ---
-            // Send a different embed if the server is offline
-            const offlineEmbed = new EmbedBuilder()
-                .setTitle(`${guildConfig.serverName || 'Server'} | Server Status`)
-                .setColor('Red')
-                .addFields(
-                    { name: 'Server Name', value: guildConfig.serverName || 'N/A' },
-                    { name: 'IP', value: guildConfig.serverIp || 'N/A' },
-                    { name: 'Port', value: guildConfig.serverPort ? `${guildConfig.serverPort}` : 'N/A' },
-                    { name: 'Status', value: '❌ Offline' }
+                    // Using inline: true to make them side-by-side
+                    { name: '🏷️ Server Name', value: `\`${guildConfig.serverName || state.name}\``, inline: true },
+                    { name: '✅ Status', value: '`Online`', inline: true },
+                    { name: '🖥️ IP', value: `\`${guildConfig.serverIp}\``, inline: true },
+                    { name: '🔌 Port', value: `\`${guildConfig.serverPort}\``, inline: true },
+                    { name: '👥 Players', value: `\`${state.players.length} / ${state.maxplayers}\``, inline: true },
+                    { name: '🌐 Version', value: `\`${state.raw.version.name}\``, inline: true }
                 )
                 .setTimestamp()
                 .setFooter({ text: '© Created by RgX' });
 
-            // Add only the refresh button to the offline embed
+            await interaction.editReply({ embeds: [onlineEmbed], components: [row] });
+
+        } catch (error) {
+            console.error('Error fetching server status:', error);
+
+            // --- NEW Offline Embed (Matches screenshot, more attractive) ---
+            
+            // Use server IP as fallback if name is not set
+            const serverName = guildConfig.serverName || guildConfig.serverIp; 
+            
+            const offlineEmbed = new EmbedBuilder()
+                .setTitle(`${serverName} | Server Status`) // Better title
+                .setColor('Red')
+                .addFields(
+                    { name: '🏷️ Server Name', value: `\`${serverName}\``, inline: true },
+                    { name: '❌ Status', value: '`Offline`', inline: true },
+                    { name: '🖥️ IP', value: `\`${guildConfig.serverIp}\``, inline: true },
+                    { name: '🔌 Port', value: `\`${guildConfig.serverPort}\``, inline: true },
+                    { name: '👥 Players', value: '`N/A`', inline: true }, // Added Player field
+                    { name: '🌐 Version', value: '`N/A`', inline: true } // Added Version field
+                )
+                .setTimestamp()
+                .setFooter({ text: '© Created by RgX' });
+
+            // Add Refresh and Join Discord buttons to the offline message
             const refreshButton = new ButtonBuilder()
                 .setCustomId('status-refresh')
-                .setLabel('Refresh Status')
+                .setLabel('Refresh')
                 .setStyle(ButtonStyle.Primary)
                 .setEmoji('🔄');
-                
-            const offlineRow = new ActionRowBuilder().addComponents(refreshButton);
             
-            await interaction.reply({ 
+            const joinDiscordButton = new ButtonBuilder()
+                .setLabel('Join Discord')
+                .setStyle(ButtonStyle.Link)
+                .setURL(guildConfig.discordInvite || 'https://discord.gg/placeholder');
+                
+            const offlineRow = new ActionRowBuilder().addComponents(refreshButton, joinDiscordButton);
+            
+            await interaction.editReply({ 
                 embeds: [offlineEmbed], 
                 components: [offlineRow], 
-                ephemeral: true 
+                ephemeral: true // Keep this so only the user sees the error
             });
         }
     },
