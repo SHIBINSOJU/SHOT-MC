@@ -52,7 +52,8 @@ module.exports = {
                         { name: 'Players', value: `\`${data.players.online} / ${data.players.max}\`` }
                     )
                     .setTimestamp()
-                    .setFooter({ text: '© Created by RgX' });
+                    .setFooter({ text: interaction.client.user.username });
+
 
                 await interaction.editReply({ embeds: [onlineEmbed], components: [row] }); 
             } 
@@ -80,7 +81,8 @@ module.exports = {
                     { name: 'Status', value: '`❌ Offline`' }
                 )
                 .setTimestamp()
-                .setFooter({ text: '© Created by RgX' });
+                .setFooter({ text: interaction.client.user.username });
+
             
             await interaction.editReply({ 
                 embeds: [offlineEmbed], 
