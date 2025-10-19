@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const GuildConfig = require('../models/GuildConfig');
 const { fetch } = require('undici'); // Use undici for fetching
 
@@ -28,9 +28,20 @@ module.exports = {
 
             // --- Build Online Embed ---
             if (data.online) {
+                
+                // --- NEW: Create the Playerlist Button ---
+                const playerListButton = new ButtonBuilder()
+                    .setCustomId('status-player-list') // This ID will be used in interactionCreate.js
+                    .setLabel('Playerlist')
+                    .setStyle(ButtonStyle.Primary) // This makes it blue
+                    .setDisabled(data.players.online === 0); // Disable if no one is online
+
+                const row = new ActionRowBuilder().addComponents(playerListButton);
+                // --- End of new button code ---
+
                 const onlineEmbed = new EmbedBuilder()
                     .setColor(0x57F287) // Green
-                    .setTitle(guildConfig.serverName || data.motd.clean[0] || 'Minecraft Server')
+                    .setTitle(guildConfig.serverName || (data.motd && data.motd.clean[0]) || 'Minecraft Server')
                     .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
                     .setDescription(guildConfig.serverDescription || null)
                     .addFields(
@@ -44,7 +55,8 @@ module.exports = {
                     .setTimestamp()
                     .setFooter({ text: '© Created by RgX' });
 
-                await interaction.editReply({ embeds: [onlineEmbed] }); // No components
+                // Send the embed *with* the button
+                await interaction.editReply({ embeds: [onlineEmbed], components: [row] }); 
             } 
             // --- Build Offline Embed ---
             else {
@@ -54,8 +66,6 @@ module.exports = {
         } catch (error) {
             console.error('Error fetching server status (mcsrvstat):', error.message);
             
-            // --- Build Offline Embed ---
-            // We need to re-fetch config if it failed in the try block
             const config = guildConfig || await GuildConfig.findOne({ guildId });
             
             const offlineEmbed = new EmbedBuilder()
@@ -74,10 +84,11 @@ module.exports = {
                 .setTimestamp()
                 .setFooter({ text: '© Created by RgX' });
             
+            // Send the offline embed (no buttons)
             await interaction.editReply({ 
                 embeds: [offlineEmbed], 
+                components: [], // No buttons
                 ephemeral: true 
-                // No components
             });
         }
     },
