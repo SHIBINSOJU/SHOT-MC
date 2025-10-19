@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const GuildConfig = require('../models/GuildConfig');
-const gamedig = require('gamedig'); // Use gamedig again
+const gamedig = require('gamedig'); // Use gamedig
 
 async function updateStatus(client, guildConfig) {
     const channel = await client.channels.fetch(guildConfig.statusChannelId).catch(() => null);
@@ -23,7 +23,6 @@ async function updateStatus(client, guildConfig) {
             type: guildConfig.serverEdition === 'bedrock' ? 'minecraftbe' : 'minecraft', 
             host: guildConfig.serverIp,
             port: guildConfig.serverPort,
-            // socketTimeout: 5000 
         });
         
         const serverName = guildConfig.serverName || state.name || guildConfig.serverIp;
@@ -32,8 +31,12 @@ async function updateStatus(client, guildConfig) {
         embed = new EmbedBuilder()
             .setColor(0x57F287) // Green
             .setTitle(`${serverName} | Server Status`)
-            .setThumbnail(guildConfig.thumbnailUrl || null) // Use stored thumbnail
+            .setThumbnail(guildConfig.thumbnailUrl || state.raw?.favicon || null) // Use stored thumbnail or favicon
             .addFields(
+                // --- NEW FIELDS ---
+                { name: 'Status', value: '🟢 Server Online' },
+                { name: 'MOTD', value: `\`\`\`${state.name || 'N/A'}\`\`\`` }, // MOTD in code block
+                // --- EXISTING FIELDS ---
                 { name: 'Server Name', value: `\`${serverName}\`` },
                 { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                 { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
@@ -51,11 +54,15 @@ async function updateStatus(client, guildConfig) {
             .setTitle(`${serverName} | Server Status`)
             .setThumbnail(guildConfig.thumbnailUrl || null)
             .addFields(
+                // --- NEW FIELDS ---
+                { name: 'Status', value: '🔴 Server Offline' },
+                { name: 'MOTD', value: '```N/A```' }, // MOTD placeholder
+                // --- EXISTING FIELDS ---
                 { name: 'Server Name', value: `\`${serverName}\`` },
                 { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                 { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
-                { name: 'Players', value: '`N/A`' },
-                { name: 'Status', value: '`❌ Offline`' }
+                { name: 'Players', value: '`N/A`' }
+                // Removed extra 'Status' field
             )
             .setTimestamp()
             .setFooter({ text: footerText });
@@ -88,7 +95,6 @@ async function updateStatus(client, guildConfig) {
 }
 
 // --- Interval Handler (No changes needed) ---
-// (This part remains the same)
 module.exports = async (client) => {
     // ... (rest of the code is identical) ...
      if (!client.statusUpdateIntervals) {
