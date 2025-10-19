@@ -1,10 +1,3 @@
-// Note the updated imports from 'discord.js'
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const gamedig = require('gamedig');
-const GuildConfig = require('../models/GuildConfig');
-
-module.exports = {
-    data: new SlashCommandBuilder()
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const gamedig = require('gamedig');
 const GuildConfig = require('../models/GuildConfig');
