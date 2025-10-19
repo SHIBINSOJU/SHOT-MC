@@ -167,4 +167,4 @@ async function handleRefresh(interaction) {
         // Use editReply to update the message, but don't make it ephemeral
         await interaction.editReply({ embeds: [offlineEmbed], components: [offlineRow] });
     }
-                      }
+}
