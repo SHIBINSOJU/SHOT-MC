@@ -1,16 +1,19 @@
-
 const mongoose = require('mongoose');
 
 const guildConfigSchema = new mongoose.Schema({
     guildId: { type: String, required: true, unique: true },
+    serverName: { type: String },
     serverIp: { type: String },
-    serverPort: { type: Number },
-    serverEdition: { type: String, enum: ['java', 'bedrock'] },
-    rconPort: { type: Number },
-    rconPassword: { type: String },
+    serverPort: { type: Number, default: 25565 },
+    serverEdition: { type: String, default: 'java' },
     statusChannelId: { type: String },
     statusMessageId: { type: String },
-    statusUpdateInterval: { type: Number, default: 60000 }, // Default to 60 seconds
+    statusUpdateInterval: { type: Number, default: 60000 },
+    
+    // --- FIELDS FOR NEW EMBED ---
+    serverDescription: { type: String },
+    serverBannerUrl: { type: String }, // The big image at the bottom
+    thumbnailUrl: { type: String },    // The small icon at the top right
 });
 
 module.exports = mongoose.model('GuildConfig', guildConfigSchema);
