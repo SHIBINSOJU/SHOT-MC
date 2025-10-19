@@ -18,24 +18,24 @@ async function updateStatus(client, guildConfig) {
     const intervalSeconds = (guildConfig.statusUpdateInterval || 60000) / 1000;
     const footerText = `${client.user.username} | Auto-updates every ${intervalSeconds} seconds`;
 
-    
-
     try {
-        // --- Fetch status from mcsrvstat.us API ---
-        const res = await fetch(`https://api.mcsrvstat.us/3/${guildConfig.serverIp}:${guildConfig.serverPort}`);
+        // --- THIS IS THE FIX ---
+        // Check the edition and set the correct API URL
+        const edition = guildConfig.serverEdition === 'bedrock' ? 'bedrock/3' : '3';
+        const res = await fetch(`https://api.mcsrvstat.us/${edition}/${guildConfig.serverIp}:${guildConfig.serverPort}`);
+        // --- END OF FIX ---
+
         const data = await res.json();
         
-        // Get the server name to use in the title and fields
         const serverName = guildConfig.serverName || (data.motd && data.motd.clean[0]) || guildConfig.serverIp;
 
         // --- Build Online Embed ---
         if (data.online) {
             embed = new EmbedBuilder()
                 .setColor(0x57F287) // Green
-                .setTitle(`${serverName} | Server Status`) // NEW TITLE
-                .setThumbnail(data.icon || guildConfig.thumbnailUrl || null) // ADDED THUMBNAIL
+                .setTitle(`${serverName} | Server Status`)
+                .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
                 .addFields(
-                    // --- NEW FIELDS ---
                     { name: 'Server Name', value: `\`${serverName}\`` },
                     { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                     { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
@@ -55,10 +55,9 @@ async function updateStatus(client, guildConfig) {
 
         embed = new EmbedBuilder()
             .setColor(0xED4245) // Red
-            .setTitle(`${serverName} | Server Status`) // NEW TITLE
-            .setThumbnail(guildConfig.thumbnailUrl || null) // ADDED THUMBNAIL
+            .setTitle(`${serverName} | Server Status`)
+            .setThumbnail(guildConfig.thumbnailUrl || null)
             .addFields(
-                // --- NEW FIELDS (Offline) ---
                 { name: 'Server Name', value: `\`${serverName}\`` },
                 { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                 { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
@@ -74,7 +73,7 @@ async function updateStatus(client, guildConfig) {
         if (guildConfig.statusMessageId) {
             const message = await channel.messages.fetch(guildConfig.statusMessageId).catch(() => null);
             if (message) {
-                await message.edit({ embeds: [embed], components: [] }); // components: []
+                await message.edit({ embeds: [embed], components: [] }); 
             } else {
                 const newMessage = await channel.send({ embeds: [embed], components: [] });
                 guildConfig.statusMessageId = newMessage.id;
