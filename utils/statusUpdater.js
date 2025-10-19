@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const GuildConfig = require('../models/GuildConfig');
-const { fetch } = require('undici'); // Use undici for fetching
+const gamedig = require('gamedig'); // Use gamedig again
 
 async function updateStatus(client, guildConfig) {
     const channel = await client.channels.fetch(guildConfig.statusChannelId).catch(() => null);
@@ -14,40 +14,33 @@ async function updateStatus(client, guildConfig) {
 
     let embed;
 
-    // Set interval text
     const intervalSeconds = (guildConfig.statusUpdateInterval || 60000) / 1000;
     const footerText = `${client.user.username} | Auto-updates every ${intervalSeconds} seconds`;
 
     try {
-        // --- THIS IS THE FIX ---
-        // Check the edition and set the correct API URL
-        const edition = guildConfig.serverEdition === 'bedrock' ? 'bedrock/3' : '3';
-        const res = await fetch(`https://api.mcsrvstat.us/${edition}/${guildConfig.serverIp}:${guildConfig.serverPort}`);
-        // --- END OF FIX ---
-
-        const data = await res.json();
+        // --- Fetch status using gamedig ---
+         const state = await gamedig.query({
+            type: guildConfig.serverEdition === 'bedrock' ? 'minecraftbe' : 'minecraft', 
+            host: guildConfig.serverIp,
+            port: guildConfig.serverPort,
+            // socketTimeout: 5000 
+        });
         
-        const serverName = guildConfig.serverName || (data.motd && data.motd.clean[0]) || guildConfig.serverIp;
+        const serverName = guildConfig.serverName || state.name || guildConfig.serverIp;
 
         // --- Build Online Embed ---
-        if (data.online) {
-            embed = new EmbedBuilder()
-                .setColor(0x57F287) // Green
-                .setTitle(`${serverName} | Server Status`)
-                .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
-                .addFields(
-                    { name: 'Server Name', value: `\`${serverName}\`` },
-                    { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
-                    { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
-                    { name: 'Players', value: `\`${data.players.online} / ${data.players.max}\`` }
-                )
-                .setTimestamp()
-                .setFooter({ text: footerText });
-        } 
-        // --- Build Offline Embed ---
-        else {
-             throw new Error('Server is offline');
-        }
+        embed = new EmbedBuilder()
+            .setColor(0x57F287) // Green
+            .setTitle(`${serverName} | Server Status`)
+            .setThumbnail(guildConfig.thumbnailUrl || null) // Use stored thumbnail
+            .addFields(
+                { name: 'Server Name', value: `\`${serverName}\`` },
+                { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
+                { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
+                { name: 'Players', value: `\`${state.players.length} / ${state.maxplayers}\`` }
+            )
+            .setTimestamp()
+            .setFooter({ text: footerText });
 
     } catch (error) {
         // --- Build Offline Embed ---
@@ -69,6 +62,7 @@ async function updateStatus(client, guildConfig) {
     }
 
     // --- Send/Edit Message ---
+    // (This part remains the same)
     try {
         if (guildConfig.statusMessageId) {
             const message = await channel.messages.fetch(guildConfig.statusMessageId).catch(() => null);
@@ -94,8 +88,10 @@ async function updateStatus(client, guildConfig) {
 }
 
 // --- Interval Handler (No changes needed) ---
+// (This part remains the same)
 module.exports = async (client) => {
-    if (!client.statusUpdateIntervals) {
+    // ... (rest of the code is identical) ...
+     if (!client.statusUpdateIntervals) {
         client.statusUpdateIntervals = new Map();
     }
     const guilds = await GuildConfig.find({
