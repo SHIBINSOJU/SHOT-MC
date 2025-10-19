@@ -7,11 +7,13 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@discordjs/builders": "^1.12.2",
     "discord.js": "^14.1.0",
-    "mongoose": "^6.0.12",
     "dotenv": "^10.0.0",
-    "node-fetch": "^2.6.7",
     "gamedig": "^4.0.5",
-    "rcon-client": "^4.2.2"
+    "mongoose": "^6.0.12",
+    "node-fetch": "^2.6.7",
+    "rcon-client": "^4.2.2",
+    "undici": "^7.16.0"
   }
 }
