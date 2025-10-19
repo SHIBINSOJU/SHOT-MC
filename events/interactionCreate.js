@@ -7,7 +7,6 @@ module.exports = {
     async execute(interaction) {
         
         // --- Handle Slash Commands ---
-        // I've changed isCommand() to isChatInputCommand() as it's more specific
         if (interaction.isChatInputCommand()) {
             const command = interaction.client.commands.get(interaction.commandName);
 
@@ -16,40 +15,60 @@ module.exports = {
                 return;
             }
 
+            // --- THIS IS THE FIXED CATCH BLOCK ---
             try {
                 await command.execute(interaction);
             } catch (error) {
-                console.error(error);
-                if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-                } else {
-                    await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+                console.error(`Error executing command: ${interaction.commandName}`, error);
+                
+                // --- NEW CRASH-PROOF CATCH ---
+                // We wrap the error reply in its own try...catch
+                // This stops the bot from crashing if sending the error message fails
+                try {
+                    if (interaction.replied || interaction.deferred) {
+                        await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+                    } else {
+                        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+                    }
+                } catch (catchError) {
+                    // This logs the "Unknown Interaction" error but DOES NOT crash the bot
+                    console.error('Error while sending error reply:', catchError);
                 }
+                // --- END OF FIX ---
             }
-            return; // Stop execution after handling command
+            return; 
         }
 
-        // --- Handle Button Clicks (This is the new part) ---
+        // --- Handle Button Clicks ---
         if (interaction.isButton()) {
-            
-            // --- Handler for "Show Player List" Button ---
-            if (interaction.customId === 'status-player-list') {
-                await handlePlayerList(interaction);
+            try {
+                if (interaction.customId === 'status-player-list') {
+                    await handlePlayerList(interaction);
+                }
+                
+                if (interaction.customId === 'status-refresh') {
+                    await handleRefresh(interaction);
+                }
+            } catch (buttonError) {
+                console.error(`Error handling button: ${interaction.customId}`, buttonError);
+                // Send a reply for the button error
+                try {
+                    await interaction.reply({ content: 'There was an error handling this button!', ephemeral: true });
+                } catch (e) {
+                    // If that fails, try to follow up
+                    try {
+                        await interaction.followUp({ content: 'There was an error handling this button!', ephemeral: true });
+                    } catch (finalError) {
+                        console.error('Failed to send any error message for button interaction:', finalError);
+                    }
+                }
             }
-            
-            // --- Handler for "Refresh Status" Button ---
-            if (interaction.customId === 'status-refresh') {
-                await handleRefresh(interaction);
-            }
-            
-            // You can add more button handlers here with 'else if'
         }
     },
 };
 
 
 // --- Button Function: handlePlayerList ---
-// This function runs when "Show Player List" is clicked
 async function handlePlayerList(interaction) {
     const guildId = interaction.guild.id;
     const guildConfig = await GuildConfig.findOne({ guildId });
@@ -59,7 +78,7 @@ async function handlePlayerList(interaction) {
     }
 
     try {
-        await interaction.deferReply({ ephemeral: true }); // Show "thinking..."
+        await interaction.deferReply({ ephemeral: true }); 
 
         const state = await gamedig.query({
             type: guildConfig.serverEdition === 'bedrock' ? 'minecraftbe' : 'minecraft',
@@ -67,7 +86,7 @@ async function handlePlayerList(interaction) {
             port: guildConfig.serverPort,
         });
 
-        const playerList = state.players.map(p => `• ${p.name.replace(/_/g, '\\_')}`).join('\n'); // Added underscore formatting
+        const playerList = state.players.map(p => `• ${p.name.replace(/_/g, '\\_')}`).join('\n');
 
         const playerEmbed = new EmbedBuilder()
             .setTitle(`Player List (${state.players.length}/${state.maxplayers})`)
@@ -77,32 +96,30 @@ async function handlePlayerList(interaction) {
         await interaction.editReply({ embeds: [playerEmbed] });
 
     } catch (error) {
+        console.error('Error in handlePlayerList:', error);
         await interaction.editReply({ content: 'Could not fetch player list. The server might be offline.' });
     }
 }
 
 // --- Button Function: handleRefresh ---
-// This function runs when "Refresh Status" is clicked
 async function handleRefresh(interaction) {
     const guildId = interaction.guild.id;
     let guildConfig;
 
     try {
-        await interaction.deferUpdate(); // Acknowledge the click, show "thinking..."
+        await interaction.deferUpdate(); // Acknowledge the click
 
         guildConfig = await GuildConfig.findOne({ guildId });
         if (!guildConfig) {
             return await interaction.followUp({ content: 'Server config not found.', ephemeral: true });
         }
 
-        // --- Re-run the gamedig query ---
         const state = await gamedig.query({
             type: guildConfig.serverEdition === 'bedrock' ? 'minecraftbe' : 'minecraft',
             host: guildConfig.serverIp,
             port: guildConfig.serverPort,
         });
 
-        // --- Re-build the buttons ---
         const refreshButton = new ButtonBuilder()
             .setCustomId('status-refresh')
             .setLabel('Refresh Status')
@@ -119,12 +136,11 @@ async function handleRefresh(interaction) {
         const joinDiscordButton = new ButtonBuilder()
             .setLabel('Join Discord')
             .setStyle(ButtonStyle.Link)
-            .setURL(guildConfig.discordInvite || 'https://discord.gg/placeholder'); // Make sure to set this in your config!
+            .setURL(guildConfig.discordInvite || 'https://discord.gg/placeholder'); 
 
         const row = new ActionRowBuilder()
             .addComponents(refreshButton, playerListButton, joinDiscordButton);
 
-        // --- Re-build the ONLINE Embed ---
         const onlineEmbed = new EmbedBuilder()
             .setTitle(`${guildConfig.serverName || state.name} | Server Status`)
             .setColor('Green')
@@ -143,7 +159,7 @@ async function handleRefresh(interaction) {
         await interaction.editReply({ embeds: [onlineEmbed], components: [row] });
 
     } catch (error) {
-        // --- Re-build the OFFLINE Embed ---
+        console.error('Error in handleRefresh (server offline?):', error);
         const offlineEmbed = new EmbedBuilder()
             .setTitle(`${guildConfig.serverName || 'Server'} | Server Status`)
             .setColor('Red')
@@ -164,7 +180,6 @@ async function handleRefresh(interaction) {
             
         const offlineRow = new ActionRowBuilder().addComponents(refreshButton);
         
-        // Use editReply to update the message, but don't make it ephemeral
         await interaction.editReply({ embeds: [offlineEmbed], components: [offlineRow] });
     }
 }
