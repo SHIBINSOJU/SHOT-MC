@@ -11,32 +11,28 @@ module.exports = {
                 .setRequired(true)),
                 
     async execute(interaction) {
-        // Acknowledge the command immediately
         await interaction.deferReply();
 
         const itemName = interaction.options.getString('item');
         
-        // Format the name for the API
+        // Format the name for the new API
         // "Diamond Sword" -> "diamond_sword"
         const formattedName = itemName.toLowerCase().replace(/ /g, '_');
 
-        const imageUrl = `https://mc-recipe.com/c/${formattedName}.png`;
+        // Use the new, working API: craft.sbs
+        const imageUrl = `https://craft.sbs/craft/${formattedName}/image`;
 
         try {
-            // Check if the image exists before sending it
-            const res = await fetch(imageUrl);
+            // Check if the image exists
+            // We use a HEAD request to be faster, it just checks the headers
+            const res = await fetch(imageUrl, { method: 'HEAD' });
 
             if (!res.ok) {
-                // Handle 404 Not Found
-                if (res.status === 404) {
-                    await interaction.editReply({
-                        content: `Sorry, I couldn't find a crafting recipe for \`${itemName}\`. Make sure you spelled it correctly (e.g., \`diamond_sword\`).`,
-                        ephemeral: true
-                    });
-                } else {
-                    // Handle other errors
-                    throw new Error(`API returned status ${res.status}`);
-                }
+                // Handle 404 Not Found or other errors
+                await interaction.editReply({
+                    content: `Sorry, I couldn't find a crafting recipe for \`${itemName}\`. Make sure you spelled it correctly (e.g., \`diamond_sword\`).`,
+                    ephemeral: true
+                });
                 return;
             }
 
