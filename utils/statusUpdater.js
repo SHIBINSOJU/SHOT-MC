@@ -27,7 +27,7 @@ async function updateStatus(client, guildConfig) {
         if (data.online) {
             embed = new EmbedBuilder()
                 .setColor(0x57F287) // Green
-                .setTitle(guildConfig.serverName || data.motd.clean[0] || 'Minecraft Server')
+                .setTitle(guildConfig.serverName || (data.motd && data.motd.clean[0]) || 'Minecraft Server')
                 .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
                 .setDescription(guildConfig.serverDescription || null)
                 .addFields(
@@ -58,7 +58,9 @@ async function updateStatus(client, guildConfig) {
                 { name: 'Players', value: '`N/A`' },
                 { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                 { name: 'Next Restart', value: 'Not Scheduled' },
-                { name:F: 'Server Uptime', value: 'N/A' }
+                // --- THIS IS THE CORRECTED LINE ---
+                { name: 'Server Uptime', value: 'N/A' } 
+                // ---
             )
             .setImage(guildConfig.serverBannerUrl || null)
             .setTimestamp()
@@ -106,7 +108,7 @@ module.exports = async (client) => {
         }
         await updateStatus(client, guildConfig);
         const intervalTime = guildConfig.statusUpdateInterval;
-        const newInterval = setInterval(async () => {
+        const newInterval = setInterval(async (). => {
             const latestConfig = await GuildConfig.findOne({ guildId: guildConfig.guildId });
             if (latestConfig && latestConfig.statusChannelId && latestConfig.statusUpdateInterval) {
                 await updateStatus(client, latestConfig);
