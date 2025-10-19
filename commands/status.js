@@ -22,14 +22,17 @@ module.exports = {
                 });
             }
 
-            // --- Fetch status from mcsrvstat.us API ---
-            const res = await fetch(`https://api.mcsrvstat.us/3/${guildConfig.serverIp}:${guildConfig.serverPort}`);
+            // --- THIS IS THE FIX ---
+            // Check the edition and set the correct API URL
+            const edition = guildConfig.serverEdition === 'bedrock' ? 'bedrock/3' : '3';
+            const res = await fetch(`https://api.mcsrvstat.us/${edition}/${guildConfig.serverIp}:${guildConfig.serverPort}`);
+            // --- END OF FIX ---
+            
             const data = await res.json();
 
             // --- Build Online Embed ---
             if (data.online) {
                 
-                // Get the server name to use in the title and fields
                 const serverName = guildConfig.serverName || (data.motd && data.motd.clean[0]) || guildConfig.serverIp;
 
                 const playerListButton = new ButtonBuilder()
@@ -42,10 +45,9 @@ module.exports = {
 
                 const onlineEmbed = new EmbedBuilder()
                     .setColor(0x57F287) // Green
-                    .setTitle(`${serverName} | Server Status`) // NEW TITLE
-                    .setThumbnail(data.icon || guildConfig.thumbnailUrl || null) // ADDED THUMBNAIL
+                    .setTitle(`${serverName} | Server Status`)
+                    .setThumbnail(data.icon || guildConfig.thumbnailUrl || null)
                     .addFields(
-                        // --- NEW FIELDS ---
                         { name: 'Server Name', value: `\`${serverName}\`` },
                         { name: 'Server IP', value: `\`${guildConfig.serverIp}\`` },
                         { name: 'Server Port', value: `\`${guildConfig.serverPort}\`` },
@@ -53,7 +55,6 @@ module.exports = {
                     )
                     .setTimestamp()
                     .setFooter({ text: interaction.client.user.username });
-
 
                 await interaction.editReply({ embeds: [onlineEmbed], components: [row] }); 
             } 
@@ -70,10 +71,9 @@ module.exports = {
 
             const offlineEmbed = new EmbedBuilder()
                 .setColor(0xED4245) // Red
-                .setTitle(`${serverName} | Server Status`) // NEW TITLE
-                .setThumbnail(config.thumbnailUrl || null) // ADDED THUMBNAIL
+                .setTitle(`${serverName} | Server Status`)
+                .setThumbnail(config.thumbnailUrl || null)
                 .addFields(
-                    // --- NEW FIELDS (Offline) ---
                     { name: 'Server Name', value: `\`${serverName}\`` },
                     { name: 'Server IP', value: `\`${config.serverIp || 'Not Set'}\`` },
                     { name: 'Server Port', value: `\`${config.serverPort || 'Not Set'}\`` },
@@ -82,7 +82,6 @@ module.exports = {
                 )
                 .setTimestamp()
                 .setFooter({ text: interaction.client.user.username });
-
             
             await interaction.editReply({ 
                 embeds: [offlineEmbed], 
