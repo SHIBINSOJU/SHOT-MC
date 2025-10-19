@@ -3,6 +3,10 @@ const fs = require('fs');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const mongoose = require('mongoose');
 
+// --- NEW: Require and load minecraft-data ---
+const mcData = require('minecraft-data');
+// ---
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -11,9 +15,22 @@ const client = new Client({
     ],
 });
 
+// --- NEW: Load data onto the client object ---
+// You can change the version here if needed, e.g., '1.19.4'
+// It's best to use a version supported by the minecraft-data library.
+try {
+    client.mcData = mcData('1.20.1'); 
+    console.log(`[MCData] Loaded Minecraft data for version ${client.mcData.version.minecraftVersion}`);
+} catch (e) {
+    console.error("[MCData] Failed to load Minecraft data! Craft command may not work.", e);
+    // Assign a dummy object or handle this error as appropriate
+    client.mcData = null; 
+}
+// ---
+
 client.commands = new Collection();
 
-// --- MODIFIED COMMAND LOADER ---
+// --- COMMAND LOADER ---
 console.log('--- Loading Commands ---');
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
@@ -21,17 +38,11 @@ for (const file of commandFiles) {
     try {
         const command = require(`./commands/${file}`);
         
-        // Check if command has data and a name
         if (command.data && command.data.name) {
             client.commands.set(command.data.name, command);
-            
-            // Capitalize the first letter for cleaner logging
             const commandName = command.data.name;
             const capitalizedName = commandName.charAt(0).toUpperCase() + commandName.slice(1);
-            
-            // This is the log you wanted
             console.log(`+ ${capitalizedName} command loaded.`);
-            
         } else {
             console.warn(`[WARNING] The command at ./commands/${file} is missing "data" or "data.name".`);
         }
@@ -39,13 +50,12 @@ for (const file of commandFiles) {
         console.error(`[ERROR] Failed to load command at ./commands/${file}:`, error);
     }
 }
-// This is the summary log you wanted
 console.log(`--- Successfully loaded ${client.commands.size} commands ---`);
-console.log('\n'); // Adds a space for cleaner logs
+console.log('\n'); 
 // --- END OF COMMAND LOADER ---
 
 
-// --- MODIFIED EVENT LOADER (for consistency) ---
+// --- EVENT LOADER ---
 console.log('--- Loading Events ---');
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
 
@@ -53,7 +63,6 @@ for (const file of eventFiles) {
     try {
         const event = require(`./events/${file}`);
         
-        // Check if event has a name
         if (event.name) {
             if (event.once) {
                 client.once(event.name, (...args) => event.execute(...args, client));
@@ -69,7 +78,7 @@ for (const file of eventFiles) {
     }
 }
 console.log(`--- Successfully loaded ${eventFiles.length} events ---`);
-console.log('\n'); // Adds a space
+console.log('\n'); 
 // --- END OF EVENT LOADER ---
 
 
@@ -82,5 +91,10 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
 
 client.login(process.env.DISCORD_TOKEN);
 
-const statusUpdater = require('./utils/statusUpdater');
-statusUpdater(client);
+// Only start the status updater if mcData loaded successfully
+if (client.mcData) {
+    const statusUpdater = require('./utils/statusUpdater');
+    statusUpdater(client);
+} else {
+    console.warn("[StatusUpdater] Skipping initialization due to missing Minecraft data.");
+}
